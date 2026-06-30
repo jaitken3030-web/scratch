@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daily command log</title>
+</head>
+<body>
+<div id="app"></div>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+  #app {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: #FAFAF7;
+    color: #1C2541;
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 0;
+  }
+  * { box-sizing: border-box; }
+  .display { font-family: 'Zilla Slab', Georgia, serif; }
+  .mono { font-family: 'IBM Plex Mono', monospace; }
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 24px 20px 16px;
+    border-bottom: 1px solid #DEDBD0;
+  }
+  .header h1 { font-size: 26px; font-weight: 600; margin: 0 0 2px; letter-spacing: -0.01em; }
+  .header .sub { font-size: 13px; color: #6B6A63; margin: 0; }
+  .streak { text-align: right; font-family: 'IBM Plex Mono', monospace; }
+  .streak .num { font-size: 24px; font-weight: 600; color: #C49A3C; line-height: 1; }
+  .streak .label { font-size: 10px; color: #6B6A63; text-transform: uppercase; letter-spacing: 0.06em; max-width: 110px; }
+  .banner {
+    margin: 14px 20px 0; padding: 8px 12px; background: #FFF8E8; border: 1px solid #EAD9A8;
+    border-radius: 6px; font-size: 12px; color: #6B5B2E;
+  }
+  .goalbar { display: flex; gap: 8px; padding: 14px 20px; border-bottom: 1px solid #DEDBD0; flex-wrap: wrap; }
+  .goalpill {
+    flex: 1; min-width: 130px; display: flex; align-items: center; gap: 8px;
+    padding: 8px 10px; border-radius: 6px; border: 1px solid #DEDBD0; background: #fff; font-size: 12px;
+  }
+  .goalpill .dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .goalpill .name { font-weight: 500; flex: 1; }
+  .goalpill .state { font-size: 14px; }
+  .weekrow { display: flex; gap: 4px; padding: 12px 20px; border-bottom: 1px solid #DEDBD0; align-items: flex-end; }
+  .weekday { flex: 1; text-align: center; }
+  .weekday .barwrap { height: 36px; display: flex; align-items: flex-end; justify-content: center; }
+  .weekday .bar { width: 60%; background: #C49A3C; border-radius: 2px 2px 0 0; min-height: 2px; }
+  .weekday .lbl { font-size: 10px; color: #6B6A63; margin-top: 4px; font-family: 'IBM Plex Mono', monospace; }
+  .weekday.today .lbl { color: #1C2541; font-weight: 600; }
+  .timeline { padding: 8px 20px 24px; }
+  .row { display: flex; gap: 14px; padding: 10px 0; border-bottom: 1px solid #EFEDE5; cursor: pointer; }
+  .row:last-child { border-bottom: none; }
+  .row.now { background: #FFF8E8; margin: 0 -12px; padding: 10px 12px; border-radius: 6px; border-bottom: 1px solid transparent; }
+  .row.done { opacity: 0.55; }
+  .row.kidevent { background: #F4F1EA; margin: 0 -12px; padding: 10px 12px; border-radius: 6px; border-bottom: 1px solid transparent; }
+  .timecol { width: 58px; flex-shrink: 0; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #6B6A63; padding-top: 2px; }
+  .checkcol { flex-shrink: 0; padding-top: 1px; }
+  .check {
+    width: 18px; height: 18px; border-radius: 4px; border: 1.5px solid #B4B2A9;
+    display: flex; align-items: center; justify-content: center; font-size: 12px; color: #fff; background: #fff;
+  }
+  .row.done .check { background: #4F6F52; border-color: #4F6F52; }
+  .bodycol { flex: 1; }
+  .bodycol .label { font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 6px; }
+  .bodycol .cat { font-size: 11px; color: #6B6A63; margin-top: 1px; }
+  .accent { width: 3px; border-radius: 2px; flex-shrink: 0; align-self: stretch; }
+  .chevron { font-size: 11px; color: #B4B2A9; padding-top: 3px; }
+  .detail {
+    margin: 4px 0 10px 90px; padding: 12px 14px; background: #fff; border: 1px solid #DEDBD0;
+    border-radius: 8px; font-size: 13px; line-height: 1.6; display: none;
+  }
+  .detail.open { display: block; }
+  .detail ul { margin: 4px 0 0; padding-left: 18px; }
+  .footer { padding: 14px 20px 22px; font-size: 11px; color: #B4B2A9; text-align: center; border-top: 1px solid #DEDBD0; }
+</style>
+
+<script>
+(function() {
+  const COLORS = { productivity: '#3D5A80', exercise: '#C75146', guitar: '#C49A3C', family: '#4F6F52', neutral: '#B4B2A9' };
+  const CAT_LABEL = { productivity: 'Productivity', exercise: 'Exercise', guitar: 'Guitar', family: 'Family', neutral: '' };
+  const CORE_GOALS = ['productivity', 'exercise', 'guitar', 'family'];
+  const TRACKING_START = '2026-07-06';
+
+  const EXERCISE_BY_DAY = {
+    1: { name: 'Strength — push/pull', items: ['Barbell bench press — 4 x 10-15', 'Pull-ups — 4 sets near-failure', 'Barbell overhead press — 3 x 10-12', 'Bent-over barbell rows — 3 x 10-12', 'Plank — 3 x 30-45s'] },
+    2: { name: 'Cardio — steady state', items: ['3-mile loop, conversational pace (~30 min)', '10 min mobility / core'] },
+    3: { name: 'Strength — legs/core + bag', items: ['Barbell back squats — 4 x 12-15', 'Romanian deadlifts — 3 x 10-12', 'Walking lunges — 3 x 12/leg', 'Heavy bag — 3 x 2 min rounds', 'Core finisher — 3 x 45s'] },
+    4: { name: 'Cardio — bag intervals', items: ['Warm-up — 3 min easy', '8 rounds: 1 min hard / 1 min easy', 'Cool-down — 3 min + stretch'] },
+    5: { name: 'Strength — full body', items: ['Squats — 3 x 12', 'Bench press — 3 x 12', 'Rows — 3 x 12', 'Pull-ups — 3 sets', 'Plank — 3 x 30s'] },
+    6: { name: 'Cardio — long/easy', items: ['3-mile loop, easy pace', 'Extend slightly or walk if preferred'] },
+    0: { name: 'Rest / mobility', items: ['Light stretching or full rest', 'Non-negotiable — this is where adaptation happens'] }
+  };
+
+  const KID_EVENTS = {
+    '2026-06-30': [{ start: 1050, end: 1095, label: 'Cal Karate class' }],
+    '2026-07-01': [{ start: 1080, end: 1125, label: 'Cal Karate class' }],
+    '2026-07-02': [{ start: 1005, end: 1155, label: 'Josie Swim Meet' }],
+    '2026-07-06': [{ start: 1095, end: 1140, label: 'Cal Karate class' }],
+    '2026-07-07': [{ start: 1050, end: 1095, label: 'Cal Karate class' }],
+    '2026-07-08': [{ start: 1005, end: 1155, label: 'Josie Swim Meet' }],
+    '2026-07-09': [{ start: 990, end: 1035, label: 'Cal Karate class' }],
+    '2026-07-13': [{ start: 1095, end: 1140, label: 'Cal Karate class' }],
+    '2026-07-14': [{ start: 1050, end: 1095, label: 'Cal Karate class' }]
+  };
+  const LILY_DEFAULT_DAYS = [1, 3, 5];
+
+  function pad(n) { return n < 10 ? '0' + n : '' + n; }
+  function fmtDate(d) { return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()); }
+  function fmtTime(mins) {
+    const h = Math.floor(mins / 60), m = mins % 60;
+    const hr12 = ((h % 12) || 12);
+    return hr12 + ':' + pad(m) + (h < 12 ? 'a' : 'p');
+  }
+  function minNow(d) { return d.getHours() * 60 + d.getMinutes(); }
+
+  function buildSchedule(dateKey, dow, lilyToday) {
+    const deepWorkShift = (dow === 2 || dow === 4) && !lilyToday;
+    const dw1Start = deepWorkShift ? 11 * 60 : 9 * 60 + 30;
+    const dw1End = deepWorkShift ? 13 * 60 : 12 * 60;
+    const ex = EXERCISE_BY_DAY[dow];
+    const kidEvents = KID_EVENTS[dateKey] || [];
+    const earliestKid = kidEvents.length ? Math.min.apply(null, kidEvents.map(e => e.start)) : null;
+    const work2End = (earliestKid !== null && earliestKid <= 17*60+30) ? earliestKid : 17*60+30;
+
+    const blocks = [
+      { id: 'wake', start: 7*60, end: 7*60+45, label: 'Wake up + morning routine', cat: 'family' },
+      { id: 'admin', start: 7*60+45, end: 9*60+30, label: 'Morning admin', cat: 'productivity' },
+      { id: 'deepwork1', start: dw1Start, end: dw1End, label: 'Deep work — job search' + (deepWorkShift ? ' (shifted, no Lily)' : ''), cat: 'productivity' },
+      { id: 'workout', start: 12*60, end: 12*60+45, label: 'Workout — ' + ex.name, cat: 'exercise', expandable: true, detail: ex.items },
+      { id: 'lunch', start: 12*60+45, end: 13*60+15, label: 'Lunch + decompress', cat: 'neutral' },
+      { id: 'guitar', start: 13*60+15, end: 14*60, label: 'Guitar practice', cat: 'guitar' },
+      { id: 'deepwork2', start: 14*60, end: work2End, label: 'Second work block — job search', cat: 'productivity' }
+    ];
+
+    kidEvents.forEach((e, i) => {
+      blocks.push({ id: 'kid' + i, start: e.start, end: e.end, label: e.label, cat: 'family', kid: true });
+    });
+
+    const lastKidEnd = kidEvents.length ? Math.max.apply(null, kidEvents.map(e => e.end)) : work2End;
+    let dinnerStart = Math.max(work2End, 17*60+30 <= lastKidEnd ? lastKidEnd : 17*60+30);
+    if (kidEvents.length) dinnerStart = lastKidEnd;
+
+    blocks.push({ id: 'dinner', start: dinnerStart, end: dinnerStart + 60, label: 'Dinner', cat: 'family' });
+    blocks.push({ id: 'teaching', start: dinnerStart + 60, end: dinnerStart + 120, label: 'Family teaching block', cat: 'family' });
+    blocks.push({ id: 'bedtime', start: dinnerStart + 120, end: dinnerStart + 180, label: 'Kids bedtime routine', cat: 'family' });
+    blocks.push({ id: 'shower', start: dinnerStart + 180, end: dinnerStart + 210, label: 'Shower + wind down', cat: 'neutral' });
+    blocks.push({ id: 'winddown', start: dinnerStart + 210, end: 22*60+30, label: 'Personal wind-down', cat: 'neutral' });
+
+    blocks.sort((a, b) => a.start - b.start);
+    return blocks;
+  }
+
+  async function getRecord(dateKey) {
+    try {
+      const raw = localStorage.getItem('daylog:' + dateKey);
+      return raw ? JSON.parse(raw) : { checked: [], lily: false };
+    } catch (e) { return { checked: [], lily: false }; }
+  }
+  async function setRecord(dateKey, rec) {
+    try { localStorage.setItem('daylog:' + dateKey, JSON.stringify(rec)); } catch (e) {}
+  }
+
+  let state = { record: { checked: [], lily: false }, openId: null };
+  const today = new Date();
+  const dow = today.getDay();
+  const todayKey = fmtDate(today);
+  const trackingActive = todayKey >= TRACKING_START;
+
+  function dayName(d) { return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d]; }
+
+  function render() {
+    const app = document.getElementById('app');
+    if (state.record.lily === undefined) state.record.lily = LILY_DEFAULT_DAYS.indexOf(dow) !== -1;
+    const schedule = buildSchedule(todayKey, dow, state.record.lily);
+    const nowMin = minNow(today);
+    const checked = state.record.checked || [];
+
+    const goalDone = {};
+    CORE_GOALS.forEach(g => { goalDone[g] = false; });
+    schedule.forEach(b => { if (checked.indexOf(b.id) !== -1 && CORE_GOALS.indexOf(b.cat) !== -1) goalDone[b.cat] = true; });
+
+    let html = '';
+    html += '<div class="header">';
+    html += '<div><h1 class="display">' + dayName(dow) + ', ' + (today.getMonth()+1) + '/' + today.getDate() + '</h1>';
+    html += '<p class="sub">Daily command log</p></div>';
+    if (trackingActive) {
+      html += '<div class="streak"><div class="num" id="streakNum">—</div><div class="label">day streak</div></div>';
+    } else {
+      html += '<div class="streak"><div class="label">Tracking starts<br/>Mon, Jul 6</div></div>';
+    }
+    html += '</div>';
+
+    html += '<div class="banner">Kids are out of school for summer — no drop-off/pickup blocks until late August. Cal/Josie evening activities below are synced from your calendar as of Jun 30; ask Claude to refresh this if it looks stale.</div>';
+
+    html += '<div class="goalbar">';
+    CORE_GOALS.forEach(g => {
+      html += '<div class="goalpill"><span class="dot" style="background:' + COLORS[g] + '"></span>';
+      html += '<span class="name">' + CAT_LABEL[g] + '</span>';
+      html += '<span class="state">' + (goalDone[g] ? '\u2713' : '\u00b7') + '</span></div>';
+    });
+    html += '</div>';
+
+    html += '<div class="weekrow" id="weekrow"></div>';
+
+    if (dow === 2 || dow === 4) {
+      html += '<div style="padding:10px 20px 0; font-size:12px; color:#6B6A63; display:flex; align-items:center; gap:8px;">';
+      html += '<input type="checkbox" id="lilyToggle" ' + (state.record.lily ? 'checked' : '') + ' /> ';
+      html += '<label for="lilyToggle">Lily covering Josie\'s morning swim today (deep work stays at 9:30am)</label></div>';
+    }
+
+    html += '<div class="timeline">';
+    schedule.forEach(b => {
+      const isDone = checked.indexOf(b.id) !== -1;
+      const isNow = nowMin >= b.start && nowMin < b.end;
+      const rowClass = b.kid ? 'kidevent' : (isNow ? 'now' : '');
+      html += '<div class="row ' + rowClass + ' ' + (isDone ? 'done' : '') + '" data-id="' + b.id + '" data-expandable="' + (b.expandable ? '1' : '0') + '">';
+      html += '<div class="timecol">' + fmtTime(b.start) + '</div>';
+      html += '<div class="checkcol"><div class="check" data-check="' + b.id + '">' + (isDone ? '\u2713' : '') + '</div></div>';
+      html += '<div class="accent" style="background:' + COLORS[b.cat] + '"></div>';
+      html += '<div class="bodycol"><div class="label">' + b.label + '</div>';
+      if (CAT_LABEL[b.cat]) html += '<div class="cat">' + CAT_LABEL[b.cat] + '</div>';
+      html += '</div>';
+      if (b.expandable) html += '<div class="chevron">' + (state.openId === b.id ? '\u25b4' : '\u25be') + '</div>';
+      html += '</div>';
+      if (b.expandable) {
+        html += '<div class="detail ' + (state.openId === b.id ? 'open' : '') + '" id="detail-' + b.id + '">';
+        html += '<strong>' + b.detail.length + ' items</strong><ul>';
+        b.detail.forEach(it => { html += '<li>' + it + '</li>'; });
+        html += '</ul></div>';
+      }
+    });
+    html += '</div>';
+
+    html += '<div class="footer">Tap a row to mark done · tap "workout" to see today\'s exercise detail</div>';
+
+    app.innerHTML = html;
+    attachHandlers();
+    computeWeek();
+    if (trackingActive) computeStreak();
+  }
+
+  function attachHandlers() {
+    document.querySelectorAll('.row').forEach(row => {
+      row.addEventListener('click', (e) => {
+        const id = row.getAttribute('data-id');
+        const expandable = row.getAttribute('data-expandable') === '1';
+        if (e.target.closest('[data-check]')) { toggleCheck(id); return; }
+        if (expandable) { state.openId = state.openId === id ? null : id; render(); }
+        else { toggleCheck(id); }
+      });
+    });
+    const lilyToggle = document.getElementById('lilyToggle');
+    if (lilyToggle) {
+      lilyToggle.addEventListener('change', async () => {
+        state.record.lily = lilyToggle.checked;
+        await setRecord(todayKey, state.record);
+        render();
+      });
+    }
+  }
+
+  async function toggleCheck(id) {
+    const idx = state.record.checked.indexOf(id);
+    if (idx === -1) state.record.checked.push(id); else state.record.checked.splice(idx, 1);
+    await setRecord(todayKey, state.record);
+    render();
+  }
+
+  async function computeWeek() {
+    const wrap = document.getElementById('weekrow');
+    if (!wrap) return;
+    const days = [];
+    for (let i = 6; i >= 0; i--) { const d = new Date(today); d.setDate(d.getDate() - i); days.push(d); }
+    let html = '';
+    for (const d of days) {
+      const key = fmtDate(d);
+      const rec = key < TRACKING_START ? { checked: [], lily: LILY_DEFAULT_DAYS.indexOf(d.getDay()) !== -1 } : await getRecord(key);
+      const sched = buildSchedule(key, d.getDay(), rec.lily);
+      let goalCount = 0;
+      CORE_GOALS.forEach(g => { if (sched.some(b => b.cat === g && rec.checked.indexOf(b.id) !== -1)) goalCount++; });
+      const pct = Math.round((goalCount / 4) * 100);
+      const isToday = key === todayKey;
+      html += '<div class="weekday ' + (isToday ? 'today' : '') + '">';
+      html += '<div class="barwrap"><div class="bar" style="height:' + Math.max(2, pct * 0.32) + 'px"></div></div>';
+      html += '<div class="lbl">' + dayName(d.getDay()) + '</div></div>';
+    }
+    wrap.innerHTML = html;
+  }
+
+  async function computeStreak() {
+    let streak = 0;
+    for (let i = 0; i < 60; i++) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const key = fmtDate(d);
+      if (key < TRACKING_START) break;
+      const rec = await getRecord(key);
+      const sched = buildSchedule(key, d.getDay(), rec.lily);
+      const allCore = CORE_GOALS.every(g => sched.some(b => b.cat === g && rec.checked.indexOf(b.id) !== -1));
+      if (allCore) streak++; else break;
+    }
+    const el = document.getElementById('streakNum');
+    if (el) el.textContent = streak;
+  }
+
+  (async function init() {
+    state.record = await getRecord(todayKey);
+    render();
+  })();
+})();
+</script>
+
+</body>
+</html>
