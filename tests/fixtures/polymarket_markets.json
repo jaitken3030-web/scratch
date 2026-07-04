@@ -1,0 +1,26 @@
+[
+  {
+    "condition_id": "0xfed",
+    "question": "Will the Fed cut rates in September 2026?",
+    "tokens": [
+      {"token_id": "901", "outcome": "Yes"},
+      {"token_id": "902", "outcome": "No"}
+    ]
+  },
+  {
+    "condition_id": "0xnba",
+    "question": "Will the Boston Celtics win the 2026 NBA Finals?",
+    "tokens": [
+      {"token_id": "903", "outcome": "Yes"},
+      {"token_id": "904", "outcome": "No"}
+    ]
+  },
+  {
+    "condition_id": "0xbtc",
+    "question": "Will Bitcoin close above $200k on December 31, 2026?",
+    "tokens": [
+      {"token_id": "905", "outcome": "Yes"},
+      {"token_id": "906", "outcome": "No"}
+    ]
+  }
+]

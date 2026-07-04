@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+
+# secrets & local state — never commit
+.env
+*.pem
+config.yaml
+pairs.yaml
+arbot.db
+audit.log
+KILL

@@ -1,0 +1,22 @@
+# Manual market-pair whitelist. The bot trades ONLY pairs listed here
+# with enabled: true. Never auto-matched — you are the matching engine.
+#
+# Generate candidates with:  arbot suggest-pairs
+# Then, for each candidate you want to trade:
+#   1. Read BOTH markets' full resolution rules (not just titles).
+#   2. Write the differences into `notes` (source, deadline, edge cases).
+#   3. Set enabled: true only if you'd bet the spread on them resolving
+#      identically in every state of the world.
+
+pairs:
+  - id: example-fed-decision
+    kalshi_ticker: KXFEDDECISION-26SEP-C25
+    polymarket_condition_id: "0x0000000000000000000000000000000000000000000000000000000000000000"
+    polymarket_yes_token_id: "11111111111111111111"
+    polymarket_no_token_id: "22222222222222222222"
+    notes: >
+      EXAMPLE ONLY. Kalshi resolves on the FOMC target range midpoint per
+      the Fed statement; Polymarket resolves on "any rate cut announced"
+      per its own oracle. These are NOT identical: an intermeeting move or
+      a corridor tweak could split them. Kept disabled as a template.
+    enabled: false

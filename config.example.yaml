@@ -1,0 +1,32 @@
+# arbot configuration — copy to config.yaml and adjust.
+# Credentials do NOT go here; they live in .env (see .env.example).
+
+min_edge_bps: 150          # minimum net edge (after fees) to flag an arb
+poll_interval_s: 2.0
+pairs_file: pairs.yaml
+db_path: arbot.db
+audit_log_path: audit.log
+
+kalshi_base_url: https://api.elections.kalshi.com/trade-api/v2
+polymarket_clob_url: https://clob.polymarket.com
+polymarket_gamma_url: https://gamma-api.polymarket.com
+
+fees:
+  kalshi_rate: "0.07"       # fee = ceil_to_cent(rate * C * P * (1-P))
+  polymarket_rate: "0"      # fee = rate * min(p, 1-p) * shares (0 today)
+
+sizing:
+  max_usd_per_arb: "100"
+  max_total_exposure_usd: "500"
+  max_book_depth_pct: "0.25"   # never take more than 25% of visible ask depth
+
+safety:
+  kill_switch_file: KILL       # `touch KILL` halts all trading immediately
+  daily_loss_limit_usd: "50"
+  per_market_exposure_usd: "200"
+  webhook_url: ""              # or set ALERT_WEBHOOK_URL in .env
+
+execution:
+  dry_run: true                # flip to false only when you mean it
+  second_leg_timeout_s: 10.0
+  poll_fill_interval_s: 0.5

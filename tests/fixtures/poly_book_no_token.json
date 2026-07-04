@@ -1,0 +1,6 @@
+{
+  "market": "0xtestcondition",
+  "asset_id": "222",
+  "bids": [{"price": "0.52", "size": "150"}],
+  "asks": [{"price": "0.55", "size": "200"}, {"price": "0.57", "size": "300"}]
+}
